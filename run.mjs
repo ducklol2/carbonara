@@ -14,9 +14,12 @@ function log(text) {
 async function flush() {
   if (logs.length == 0) return;
 
-  await appendFile("log.txt", logs.join("\n")).catch((err) => {
-    console.error("Failed to write logs:", err);
-  }, { flush: true });
+  await appendFile("log.txt", logs.join("\n") + "\n").catch(
+    (err) => {
+      console.error("Failed to write logs:", err);
+    },
+    { flush: true },
+  );
   logs = [];
 }
 
@@ -29,5 +32,5 @@ server.on("close", async (code) => {
   await flush();
 });
 
-process.on('SIGINT', () => server.kill());
-process.on('SIGTERM', () => server.kill());
+process.on("SIGINT", () => server.kill());
+process.on("SIGTERM", () => server.kill());
