@@ -1,6 +1,6 @@
-const http = require("node:http");
-const fs = require('node:fs').promises;
-const querystring = require('node:querystring');
+import { readFile } from 'node:fs/promises';
+import { createServer } from 'node:http';
+import { DatabaseSync } from 'node:sqlite';
 
 const host = 'localhost';
 const port = 8000;
@@ -11,7 +11,7 @@ const handlers = {
 }
 
 function handleIndex(req, res) {
-  fs.readFile(__dirname + "/index.html")
+  readFile("index.html")
     .then(contents => {
       res.setHeader("Content-Type", "text/html");
       res.writeHead(200);
@@ -19,7 +19,7 @@ function handleIndex(req, res) {
     })
     .catch(err => {
       res.writeHead(500);
-      res.end(err);
+      res.end(err.toString());
       return;
     });
 }
@@ -51,7 +51,7 @@ function handleAdd(req, res) {
   });
 };
 
-const server = http.createServer((req, res) => {
+const server = createServer((req, res) => {
   const handler = handlers[req.url];
   if (handler) handler(req, res);
   else handleError(req, res);
