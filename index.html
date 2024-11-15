@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+
+<head>
+  <title>🍝</title>
+  <style>
+  </style>
+</head>
+
+<body>
+  <h3>items</h3>
+  <p><input type="text"></p>
+  <div id="list">
+  </div>
+
+  <script type="module">
+    const list = document.querySelector('#list');
+    const input = document.querySelector('input[type="text"]');
+
+    input.onkeydown = event => {
+      if (event.key == 'Enter') {
+        const item = event.target.value;
+        event.target.value = '';
+        send(item);
+      }
+    };
+
+    async function send(item) {
+      const res = await fetch('/add', {
+        method: "POST",
+        "Content-type": "application/json",
+        body: JSON.stringify({ item })
+      });
+
+      if (!res.ok) {
+        console.error('Post failed:', res);
+        return;
+      }
+
+      const data = await res.json();
+      if (!data.items) {
+        console.error('expected items:', data);
+        return;
+      }
+
+      list.replaceChildren();
+      let i = 0;
+      for (const item of data.items) {
+        const div = document.createElement('div');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        const checkboxId = `item${i++}`;
+        checkbox.id = checkboxId;
+        div.append(checkbox);
+        const label = document.createElement('label');
+        label.textContent = item;
+        label.htmlFor = checkboxId;
+        div.append(label);
+        list.append(div);
+      }
+    }
+  </script>
+</body>
+
+</html>
