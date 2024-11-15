@@ -4,13 +4,37 @@
 <head>
   <title>🍝</title>
   <style>
+    body {
+      margin: 0;
+    }
+
+    label, input {
+      font-size: 2em;
+    }
+
+    label {
+      display: block;
+    }
+
+    button {
+      float: right;
+      height: 2.5em;
+    }
+
+    .item:nth-child(odd) {
+      background-color: lightcyan;
+    }
+    .item:nth-child(even) {
+      background-color: lightblue;
+    }
   </style>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 
 <body>
-  <h3>groceries</h3>
-  <p><input type="text" autofocus></p>
+  <div id="add">
+    <input type="text" placeholder="new item" autofocus>
+  </div>
   <div id="list">
   </div>
 
@@ -48,34 +72,61 @@
 
     function render(items) {
       list.replaceChildren();
-      for (let i = 0; i < items.length; i++) {
-        const div = document.createElement('div');
+      for (const item of items) {
+        const label = document.createElement('label');
+        label.textContent = item.value;
+
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        const checkboxId = `item${i}`;
-        checkbox.id = checkboxId;
-        checkbox.checked = items[i].checked;
+        checkbox.checked = item.checked;
         checkbox.onchange = event => {
-          check(i, event.target.checked);
+          check(item.rowid, event.target.checked);
         };
-        div.append(checkbox);
-        const label = document.createElement('label');
-        label.textContent = items[i].text;
-        label.htmlFor = checkboxId;
+        label.prepend(checkbox);
+
+        const button = document.createElement('button');
+        button.textContent = "X";
+        button.onclick = () => {
+          remove(item.rowid);
+        };
+        label.append(button);
+
+        const div = document.createElement('div');
         div.append(label);
+        div.classList.add('item');
         list.append(div);
       }
     }
 
-    async function check(itemIndex, checked) {
+    async function check(rowid, checked) {
       const res = await fetch('/check', {
         method: "POST",
         "Content-type": "application/json",
-        body: JSON.stringify({ itemIndex, checked })
+        body: JSON.stringify({ rowid, checked })
       });
 
       if (!res.ok) {
         console.error('/check post failed:', res);
+        return;
+      }
+
+      const data = await res.json();
+      if (!data.items) {
+        console.error('expected items:', data);
+        return;
+      }
+      render(data.items);
+    }
+
+    async function remove(rowid) {
+      const res = await fetch('/remove', {
+        method: "POST",
+        "Content-type": "application/json",
+        body: JSON.stringify({ rowid })
+      });
+
+      if (!res.ok) {
+        console.error('/remove post failed:', res);
         return;
       }
 
