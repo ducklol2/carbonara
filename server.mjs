@@ -2,7 +2,6 @@ import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
 
-const host = 'localhost';
 const port = 8000;
 
 const handlers = {
@@ -57,6 +56,6 @@ const server = createServer((req, res) => {
   else handleError(req, res);
 });
 
-server.listen(port, host, () => {
-  console.log(`Server is running on http://${host}:${port}`);
+server.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
 });

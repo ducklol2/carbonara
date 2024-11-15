@@ -6,5 +6,6 @@ in
 pkgs.mkShellNoCC {
   packages = with pkgs; [
     nodejs_23
+    git
   ];
 }
