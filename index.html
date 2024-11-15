@@ -5,11 +5,12 @@
   <title>🍝</title>
   <style>
   </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 
 <body>
-  <h3>items</h3>
-  <p><input type="text"></p>
+  <h3>groceries</h3>
+  <p><input type="text" autofocus></p>
   <div id="list">
   </div>
 
@@ -42,23 +43,65 @@
         console.error('expected items:', data);
         return;
       }
+      render(data.items);
+    }
 
+    function render(items) {
       list.replaceChildren();
-      let i = 0;
-      for (const item of data.items) {
+      for (let i = 0; i < items.length; i++) {
         const div = document.createElement('div');
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        const checkboxId = `item${i++}`;
+        const checkboxId = `item${i}`;
         checkbox.id = checkboxId;
+        checkbox.checked = items[i].checked;
+        checkbox.onchange = event => {
+          check(i, event.target.checked);
+        };
         div.append(checkbox);
         const label = document.createElement('label');
-        label.textContent = item;
+        label.textContent = items[i].text;
         label.htmlFor = checkboxId;
         div.append(label);
         list.append(div);
       }
     }
+
+    async function check(itemIndex, checked) {
+      const res = await fetch('/check', {
+        method: "POST",
+        "Content-type": "application/json",
+        body: JSON.stringify({ itemIndex, checked })
+      });
+
+      if (!res.ok) {
+        console.error('/check post failed:', res);
+        return;
+      }
+
+      const data = await res.json();
+      if (!data.items) {
+        console.error('expected items:', data);
+        return;
+      }
+      render(data.items);
+    }
+
+    async function fetchList() {
+      const res = await fetch('/list');
+      if (!res.ok) {
+        console.error('Post failed:', res);
+        return;
+      }
+
+      const data = await res.json();
+      if (!data.items) {
+        console.error('expected items:', data);
+        return;
+      }
+      render(data.items);
+    }
+    fetchList();
   </script>
 </body>
 

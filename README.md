@@ -21,10 +21,21 @@
 
 1. Exit temporary shell: _Ctrl+D_
 
-1. Run:
+1. Enter directory & open full shell:
 
    ```
    cd carbonara
    nix-shell
+   ```
+
+1. Run:
+
+   ```
    node run.mjs
+   ```
+
+1. Update:
+   
+   ```
+   git pull
    ```
