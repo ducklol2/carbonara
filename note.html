@@ -20,6 +20,15 @@
       font-family: monospace;
     }
 
+    #main {
+      display: grid;
+      /* grid-template-columns: 5fr 1fr; */
+    }
+
+    #menu {
+      display: none;
+    }
+
     #content {
       background-color: lightcyan;
       overflow-y: scroll;
@@ -28,19 +37,42 @@
     #status {
       background-color: lightseagreen;
     }
+    
+    #titlebar {
+      display: grid;
+      grid-template-columns: 5fr 1fr;
+      justify-items: center;
+    }
 
     #title {
-      font-size: 6vh;
       background-color: lightpink;
+      font-size: 6vh;
+    }
+
+    #menubutton {
+      background-color: lightsalmon;
+      font-size: 6vh;
     }
   </style>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 
 <body>
-  <div id="content" contentEditable="plaintext-only" spellcheck="false">content</div>
+  <div id="main">
+    <div id="content" contentEditable="plaintext-only" spellcheck="false">content</div>
+    <div id="menu">
+      <ul>
+        <li>note 1</li>
+        <li>note 2</li>
+        <li>note 3</li>
+      </ul>
+    </div>
+  </div>
   <div id="status">status</div>
-  <div id="title" contentEditable="plaintext-only" spellcheck="false">title</div>
+  <div id="titlebar">
+    <div id="title" contentEditable="plaintext-only" spellcheck="false">title</div>
+    <div id="menubutton">menu</div>
+  </div>
 
   <script type="module">
     function rowid() {
@@ -54,6 +86,15 @@
 
     const title = document.querySelector('#title');
     title.onblur = () => addOrUpdate();
+
+    const main = document.querySelector('#main');
+    const menu = document.querySelector('#menu');
+    const menubutton = document.querySelector('#menubutton');
+    menubutton.onclick = () => {
+      menu.style.display = menu.style.display ? '' : 'block';
+      main.style['grid-template-columns'] =
+       main.style['grid-template-columns'] ? '' : '5fr 1fr';
+    };
 
     async function addOrUpdate() {
       if (rowid()) {
@@ -96,8 +137,16 @@
     const status = document.querySelector('#status');
     function render(data) {
       status.textContent = `lastInsert: ${data.lastInsertRowid}, `;
+      menu.replaceChildren();
       for (const note of data.notes) {
-        status.textContent += `"${note.title}" [${note.rowid}], `;
+        const a = document.createElement('a');
+        a.href = `/note/${note.rowid}`;
+        a.textContent = note.title;
+
+        const p = document.createElement('p');
+        p.append(a);
+        menu.append(p);
+
         if (rowid() == note.rowid) {
           content.textContent = note.content;
           title.textContent = note.title;
