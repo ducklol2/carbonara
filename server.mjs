@@ -6,111 +6,95 @@ const port = 8000;
 const db = new DatabaseSync("db.sqlite");
 db.exec(`
   CREATE TABLE IF NOT EXISTS items(
+    created DATETIME DEFAULT CURRENT_TIMESTAMP,
+    modified DATETIME DEFAULT CURRENT_TIMESTAMP,
     value TEXT,
     checked INTEGER
-  ) STRICT
+  )
 `);
-const insert = db.prepare("INSERT INTO items (value, checked) VALUES (?, ?)");
-const query = db.prepare("SELECT rowid, * FROM items ORDER BY rowid");
-const remove = db.prepare("DELETE FROM items WHERE rowid = ?");
-console.log("Server start; db:", query.all());
+db.exec(`
+  CREATE TABLE IF NOT EXISTS notes(
+    created DATETIME DEFAULT CURRENT_TIMESTAMP,
+    modified DATETIME DEFAULT CURRENT_TIMESTAMP,
+    title TEXT,
+    note TEXT
+  )
+`);
+const insertItem = db.prepare("INSERT INTO items (value, checked) VALUES (?, ?)");
+const queryItem = db.prepare("SELECT rowid, * FROM items ORDER BY rowid");
+const removeItem = db.prepare("DELETE FROM items WHERE rowid = ?");
+console.log("Server start; db items:", queryItem.all());
 
-const handlers = {
-  "/": handleIndex,
-  "/list": handleList,
-  "/add": handleAdd,
-  "/check": handleCheck,
-  "/remove": handleRemove,
-};
+const insertNote = db.prepare("INSERT INTO notes (title, note) VALUES (?, ?)");
+const queryNote = db.prepare("SELECT rowid, * FROM notes ORDER BY rowid");
+const removeNote = db.prepare("DELETE FROM notes WHERE rowid = ?");
+console.log("Server start; db notes:", queryNote.all());
+
+const handlers = {};
 
 let indexHtml = readFileSync("index.html");
 watch("index.html", () => (indexHtml = readFileSync("index.html")));
-function handleIndex(req, res) {
+handlers['/'] = (req, res) => {
   res.setHeader("Content-Type", "text/html");
   res.writeHead(200);
   res.end(indexHtml);
-}
+};
 
-function handleError(req, res) {
+function error(req, res, code, text) {
   res.setHeader("Content-Type", "text/plain");
-  res.writeHead(500);
-  res.end("Handler not found");
+  res.writeHead(code);
+  res.end(text);
 }
 
-function handleList(req, res) {
+handlers['/note/list'] = (req, res) => {
   res.setHeader("Content-Type", "application/json");
   res.writeHead(200);
-  res.end(JSON.stringify({ items: query.all() }));
+  res.end(JSON.stringify({ items: queryItem.all() }));
 }
 
-const items = [];
-function handleAdd(req, res) {
+async function getJsonBody(req) {
   let body = "";
-  req.on("data", (data) => {
-    body += data;
-  });
-  req.on("end", () => {
-    const data = JSON.parse(body);
-    console.log("/add", data);
-    if (data.item) {
-      console.log("sqlite insert:", insert.run(data.item, 0));
-      res.setHeader("Content-Type", "application/json");
-      res.writeHead(200);
-      res.end(JSON.stringify({ items: query.all() }));
-    } else {
-      res.writeHead(500);
-      res.end("No item found");
-    }
+  req.on("data", data => body += data);
+  return new Promise((resolve, reject) => {
+    req.on("end", () => resolve(JSON.parse(body)));
   });
 }
 
-function handleCheck(req, res) {
-  let body = "";
-  req.on("data", (data) => {
-    body += data;
-  });
-  req.on("end", () => {
-    const data = JSON.parse(body);
-    console.log("/check", data);
-    if ((!"rowid") in data || (!"checked") in data) {
-      res.writeHead(500);
-      res.end(`No rowid / checked: ${data}`);
-      return;
-    }
+handlers['/note/add'] = async (req, res) => {
+  const data = await getJsonBody(req);
+  if (!data.item) return error(req, res, 500, 'No item found');
 
-    const update = db.prepare("UPDATE items SET checked = ? WHERE rowid = ?");
-    console.log("sqlite update:", update.run(data.checked ? 1 : 0, data.rowid));
-    res.setHeader("Content-Type", "application/json");
-    res.writeHead(200);
-    res.end(JSON.stringify({ items: query.all() }));
-  });
+  console.log("sqlite insert:", insertItem.run(data.item, 0));
+  handlers['/note/list'](req, res);
 }
 
-function handleRemove(req, res) {
-  let body = "";
-  req.on("data", (data) => {
-    body += data;
-  });
-  req.on("end", () => {
-    const data = JSON.parse(body);
-    console.log("/remove", data);
-    if ((!"rowid") in data) {
-      res.writeHead(500);
-      res.end(`No rowid in /remove: ${data}`);
-      return;
-    }
+handlers['/note/check'] = async (req, res) => {
+  const data = await getJsonBody(req);
+  if (!"rowid" in data || !"checked" in data) {
+    error(req, res, 500, `No rowid / checked: ${data}`);
+    return;
+  }
 
-    console.log("sqlite remove:", remove.run(data.rowid));
-    res.setHeader("Content-Type", "application/json");
-    res.writeHead(200);
-    res.end(JSON.stringify({ items: query.all() }));
-  });
+  const update = db.prepare("UPDATE items SET checked = ? WHERE rowid = ?");
+  console.log("sqlite update:", update.run(data.checked ? 1 : 0, data.rowid));
+  handlers['/note/list'](req, res);
+}
+
+handlers['/note/remove'] = async (req, res) => {
+  const data = await getJsonBody(req);
+  if ((!"rowid") in data) {
+    error(req, res, 500, `No rowid to remove: ${data}`);
+    return;
+  }
+
+  console.log("sqlite remove:", removeItem.run(data.rowid));
+  handlers['/note/list'](req, res);
 }
 
 const server = createServer((req, res) => {
   const handler = handlers[req.url];
   if (handler) handler(req, res);
-  else handleError(req, res);
+  else error(req, res, '404', `Not found: ${req.url}`);
 });
 
 server.listen(port, () => {
