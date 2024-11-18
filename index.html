@@ -51,7 +51,7 @@
     };
 
     async function send(item) {
-      const res = await fetch('/note/add', {
+      const res = await fetch('/item/add', {
         method: "POST",
         "Content-type": "application/json",
         body: JSON.stringify({ item })
@@ -99,7 +99,7 @@
     }
 
     async function check(rowid, checked) {
-      const res = await fetch('/note/check', {
+      const res = await fetch('/item/check', {
         method: "POST",
         "Content-type": "application/json",
         body: JSON.stringify({ rowid, checked })
@@ -119,7 +119,7 @@
     }
 
     async function remove(rowid) {
-      const res = await fetch('/note/remove', {
+      const res = await fetch('/item/remove', {
         method: "POST",
         "Content-type": "application/json",
         body: JSON.stringify({ rowid })
@@ -139,7 +139,7 @@
     }
 
     async function fetchList() {
-      const res = await fetch('/note/list');
+      const res = await fetch('/item/list');
       if (!res.ok) {
         console.error('Post failed:', res);
         return;

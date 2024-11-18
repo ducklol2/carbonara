@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+
+<head>
+  <title>🍝 notes</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+    }
+
+    body {
+      display: grid;
+      grid-template-rows: 79fr 1fr 10fr;
+    }
+
+    div {
+      padding: 10px;
+      font-family: monospace;
+    }
+
+    #content {
+      background-color: lightcyan;
+      overflow-y: scroll;
+    }
+
+    #status {
+      background-color: lightseagreen;
+    }
+
+    #title {
+      font-size: 6vh;
+      background-color: lightpink;
+    }
+  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+  <div id="content" contentEditable="plaintext-only" spellcheck="false">content</div>
+  <div id="status">status</div>
+  <div id="title" contentEditable="plaintext-only" spellcheck="false">title</div>
+
+  <script type="module">
+    function rowid() {
+      const match = /note\/(\d+)$/.exec(window.location.pathname);
+      return match ? parseInt(match[1]) : null;
+    }
+    console.log('rowid:', rowid());
+
+    const content = document.querySelector('#content');
+    content.onblur = () => addOrUpdate();
+
+    const title = document.querySelector('#title');
+    title.onblur = () => addOrUpdate();
+
+    async function addOrUpdate() {
+      if (rowid()) {
+        update(rowid(), title.textContent, content.textContent);
+      } else {
+        const rowid = await add(title.textContent, content.textContent);
+        history.pushState({}, '', `/note/${rowid}`);
+      }
+    }
+
+    async function post(path, body) {
+      const response = await fetch(path, {
+        method: "POST",
+        "Content-type": "application/json",
+        body: JSON.stringify(body)
+      });
+
+      return new Promise(async (resolve, reject) => {
+        if (response.ok) resolve(await response.json());
+        else {
+          console.error(path, 'failed:', response);
+          reject();
+        }
+      });
+    }
+
+    async function add(title, content) {
+      const data = await post('/note/add', {
+        title, content
+      });
+
+      if (!data.notes) {
+        console.error('expected notes:', data);
+        return;
+      }
+      render(data);
+      return data.lastInsertRowid;
+    }
+
+    const status = document.querySelector('#status');
+    function render(data) {
+      status.textContent = `lastInsert: ${data.lastInsertRowid}, `;
+      for (const note of data.notes) {
+        status.textContent += `"${note.title}" [${note.rowid}], `;
+        if (rowid() == note.rowid) {
+          content.textContent = note.content;
+          title.textContent = note.title;
+        }
+      }
+    }
+
+    async function update(rowid, title, content) {
+      const data = await post('/note/update', {
+        rowid, title, content
+      });
+
+      if (!data.notes) {
+        console.error('expected notes:', data);
+        return;
+      }
+
+      render(data);
+    }
+
+    async function remove(rowid) {
+      const data = await post('/note/remove', { rowid });
+      if (!data.notes) {
+        console.error('expected notes:', data);
+        return;
+      }
+      render(data);
+    }
+
+    async function list() {
+      const res = await fetch('/note/list');
+      if (!res.ok) {
+        console.error('Post failed:', res);
+        return;
+      }
+
+      const data = await res.json();
+      if (!data.notes) {
+        console.error('expected items:', data);
+        return;
+      }
+      render(data);
+    }
+    list();
+  </script>
+</body>
+
+</html>
