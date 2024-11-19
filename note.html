@@ -4,6 +4,9 @@
 <head>
   <title>🍝 notes</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <script type="module" src="/client.mjs"></script>
+  <script type="module" src="/client_api.mjs"></script>
+  <script type="module" src="/client_util.mjs"></script>
   <style>
     html,
     body {
@@ -25,7 +28,6 @@
     #main {
       padding: 0px;
       display: grid;
-      /* grid-template-columns: 5fr 1fr; */
     }
 
     #menu {
@@ -56,148 +58,31 @@
       background-color: lightsalmon;
       font-size: 6vh;
     }
+
+    #editor {
+      background-color: lightgreen;
+      display: block;
+      width: 100%;
+      height: 3em;
+    }
   </style>
 </head>
 
 <body>
   <div id="main">
-    <div id="content" contentEditable="plaintext-only" spellcheck="false">content</div>
+    <div id="content">
+      <textarea id="editor"></textarea>
+    </div>
     <div id="menu">
       <a href="/note">New Note</a>
-      <div id="notes">
-        <ul>
-          <li>note 1</li>
-          <li>note 2</li>
-          <li>note 3</li>
-        </ul>
-      </div>
+      <div id="noteslist"></div>
     </div>
   </div>
-  <div id="status">status</div>
+  <div id="status"></div>
   <div id="titlebar">
-    <div id="title" contentEditable="plaintext-only" spellcheck="false">title</div>
-    <div id="menubutton">menu</div>
+    <div id="title" contentEditable="plaintext-only" spellcheck="false"></div>
+    <div id="menubutton">☰</div>
   </div>
-
-  <script type="module">
-    function rowid() {
-      const match = /note\/(\d+)$/.exec(window.location.pathname);
-      return match ? parseInt(match[1]) : null;
-    }
-    console.log('rowid:', rowid());
-
-    const content = document.querySelector('#content');
-    content.onblur = () => addOrUpdate();
-
-    const title = document.querySelector('#title');
-    title.onblur = () => addOrUpdate();
-
-    const main = document.querySelector('#main');
-    const menu = document.querySelector('#menu');
-    const menubutton = document.querySelector('#menubutton');
-    menubutton.onclick = () => {
-      menu.style.display = menu.style.display ? '' : 'block';
-      main.style['grid-template-columns'] =
-          main.style['grid-template-columns'] ? '' : '5fr 1fr';
-    };
-
-    async function addOrUpdate() {
-      if (rowid()) {
-        update(rowid(), title.textContent, content.textContent);
-      } else {
-        const rowid = await add(title.textContent, content.textContent);
-        history.pushState({}, '', `/note/${rowid}`);
-      }
-    }
-
-    async function post(path, body) {
-      const response = await fetch(path, {
-        method: "POST",
-        "Content-type": "application/json",
-        body: JSON.stringify(body)
-      });
-
-      return new Promise(async (resolve, reject) => {
-        if (response.ok) resolve(await response.json());
-        else {
-          console.error(path, 'failed:', response);
-          reject();
-        }
-      });
-    }
-
-    async function add(title, content) {
-      const data = await post('/note/add', {
-        title, content
-      });
-
-      if (!data.notes) {
-        console.error('expected notes:', data);
-        return;
-      }
-      render(data);
-      return data.lastInsertRowid;
-    }
-
-    const status = document.querySelector('#status');
-    const notes = document.querySelector('#notes');
-    function render(data) {
-      status.textContent = `lastInsert: ${data.lastInsertRowid}, `;
-      notes.replaceChildren();
-      for (const note of data.notes) {
-        const a = document.createElement('a');
-        a.href = `/note/${note.rowid}`;
-        a.textContent = note.title;
-
-        const p = document.createElement('p');
-        p.append(a);
-        notes.append(p);
-
-        if (rowid() == note.rowid) {
-          content.textContent = note.content;
-          title.textContent = note.title;
-        }
-      }
-    }
-
-    async function update(rowid, title, content) {
-      const data = await post('/note/update', {
-        rowid, title, content
-      });
-
-      if (!data.notes) {
-        console.error('expected notes:', data);
-        return;
-      }
-
-      render(data);
-    }
-
-    async function remove(rowid) {
-      const data = await post('/note/remove', { rowid });
-      if (!data.notes) {
-        console.error('expected notes:', data);
-        return;
-      }
-      render(data);
-    }
-
-    async function list() {
-      const res = await fetch('/note/list');
-      if (!res.ok) {
-        console.error('Post failed:', res);
-        return;
-      }
-
-      const data = await res.json();
-      if (!data.notes) {
-        console.error('expected items:', data);
-        return;
-      }
-      render(data);
-    }
-    list();
-  </script>
 </body>
 
 </html>

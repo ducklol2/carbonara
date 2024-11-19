@@ -35,21 +35,36 @@ function handle(path, handler) {
   handlers.push({path: new RegExp(`^${path}$`), handler});
 }
 
-let indexHtml = readFileSync("index.html");
-watch("index.html", () => (indexHtml = readFileSync("index.html")));
-handle('/', (req, res) => {
-  res.setHeader("Content-Type", "text/html");
-  res.writeHead(200);
-  res.end(indexHtml);
-});
+const staticFiles = [
+  ['index.html', '/'],
+  ['note.html', '/note(/\\d+)?'],
+  ['client.mjs'],
+  ['client_api.mjs'],
+  ['client_util.mjs'],
+];
 
-let noteHtml = readFileSync("note.html");
-watch("note.html", () => (noteHtml = readFileSync("note.html")));
-handle("/note(/\\d+)?", (req, res) => {
-  res.setHeader("Content-Type", "text/html");
-  res.writeHead(200);
-  res.end(noteHtml);
-});
+function contentType(name) {
+  if (name.endsWith('.html')) {
+    return 'text/html';
+  } else if (name.endsWith('.mjs')) {
+    return 'text/javascript';
+  } else {
+    throw Error('No content type for ' + name);
+  }
+}
+
+for (const [file, ...aliases] of staticFiles) {
+  let contents = readFileSync(file);
+  watch(file, () => contents = readFileSync(file));
+  aliases.push('/' + file);
+  for (const alias of aliases) {
+    handle(alias, (req, res) => {
+      res.setHeader("Content-Type", contentType(file));
+      res.writeHead(200);
+      res.end(contents);
+    });
+  }
+}
 
 function error(req, res, code, text) {
   res.setHeader("Content-Type", "text/plain");
