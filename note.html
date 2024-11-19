@@ -3,6 +3,7 @@
 
 <head>
   <title>🍝 notes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <style>
     html,
     body {
@@ -16,11 +17,13 @@
     }
 
     div {
+      margin: 0px;
       padding: 10px;
       font-family: monospace;
     }
 
     #main {
+      padding: 0px;
       display: grid;
       /* grid-template-columns: 5fr 1fr; */
     }
@@ -37,7 +40,7 @@
     #status {
       background-color: lightseagreen;
     }
-    
+
     #titlebar {
       display: grid;
       grid-template-columns: 5fr 1fr;
@@ -54,18 +57,20 @@
       font-size: 6vh;
     }
   </style>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 
 <body>
   <div id="main">
     <div id="content" contentEditable="plaintext-only" spellcheck="false">content</div>
     <div id="menu">
-      <ul>
-        <li>note 1</li>
-        <li>note 2</li>
-        <li>note 3</li>
-      </ul>
+      <a href="/note">New Note</a>
+      <div id="notes">
+        <ul>
+          <li>note 1</li>
+          <li>note 2</li>
+          <li>note 3</li>
+        </ul>
+      </div>
     </div>
   </div>
   <div id="status">status</div>
@@ -93,7 +98,7 @@
     menubutton.onclick = () => {
       menu.style.display = menu.style.display ? '' : 'block';
       main.style['grid-template-columns'] =
-       main.style['grid-template-columns'] ? '' : '5fr 1fr';
+          main.style['grid-template-columns'] ? '' : '5fr 1fr';
     };
 
     async function addOrUpdate() {
@@ -135,9 +140,10 @@
     }
 
     const status = document.querySelector('#status');
+    const notes = document.querySelector('#notes');
     function render(data) {
       status.textContent = `lastInsert: ${data.lastInsertRowid}, `;
-      menu.replaceChildren();
+      notes.replaceChildren();
       for (const note of data.notes) {
         const a = document.createElement('a');
         a.href = `/note/${note.rowid}`;
@@ -145,7 +151,7 @@
 
         const p = document.createElement('p');
         p.append(a);
-        menu.append(p);
+        notes.append(p);
 
         if (rowid() == note.rowid) {
           content.textContent = note.content;
