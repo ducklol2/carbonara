@@ -29,6 +29,11 @@
    sudo apt-get install direnv
    ```
 
+   And hook it into your shell (https://direnv.net/docs/hook.html):
+
+    - ~/.bashrc: `eval "$(direnv hook bash)"`
+    - ~/.zshrc (MacOS): `eval "$(direnv hook zsh)"`
+
 1. Enter directory & enable this .envrc:
 
    ```
