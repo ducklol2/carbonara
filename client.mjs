@@ -67,6 +67,22 @@ editor.onkeydown = event => {
     q('#status').textContent = "Waiting to save...";
   }
 };
+editor.onpaste = event => {
+  const data = extractPaste(event);
+  console.log('paste data:', data);
+  event.preventDefault();
+};
+
+function extractPaste(event) {
+  // console.log('paste', event.clipboardData.items.length, 'items:', event.clipboardData.types, event.clipboardData);
+  const fileIndex = event.clipboardData.types.indexOf('Files');
+  if (fileIndex >= 0) {
+    // console.log('paste file:', event.clipboardData.items[fileIndex].getAsFile());
+    return event.clipboardData.items[fileIndex].getAsFile();
+  }
+  
+  return event.clipboardData.getData('text');
+}
 
 q('#content').onclick = () => editor.focus();
 
