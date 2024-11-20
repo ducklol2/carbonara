@@ -21,6 +21,16 @@ function renderTitle() {
 }
 renderTitle();
 
+q('#title').onkeydown = event => {
+  if (event.key != 'Enter') return;
+  
+  event.target.blur();
+  event.stopPropagation();
+  event.preventDefault();
+
+  startSave();
+};
+
 function renderMenu() {
   q('#noteslist').replaceChildren();
   for (const note of notes) {
@@ -50,8 +60,14 @@ function renderContent() {
 }
 renderContent();
 
-const editor = q('#editor');
 let timeoutId = null;
+function startSave() {
+  if (timeoutId) clearTimeout(timeoutId);
+  timeoutId = setTimeout(save, 1000);
+  q('#status').textContent = "Waiting to save...";
+}
+
+const editor = q('#editor');
 editor.onkeydown = event => {
   if (event.key == 'Enter') {
     note.content += editor.value + '\n';
@@ -61,10 +77,7 @@ editor.onkeydown = event => {
     event.preventDefault();
     event.stopPropagation();
     editor.focus();
-
-    if (timeoutId) clearTimeout(timeoutId);
-    timeoutId = setTimeout(save, 2000);
-    q('#status').textContent = "Waiting to save...";
+    startSave();
   }
 };
 editor.onpaste = event => {
@@ -103,7 +116,7 @@ async function save() {
     notes = data.notes;
   } else {
     const data = await api.add(note.title, note.content);
-    history.pushState({}, '', `/note/${data.lastInsertRowId}`);
+    history.pushState({}, '', `/note/${data.lastInsertRowid}`);
     notes = data.notes;
   }
   renderMenu();

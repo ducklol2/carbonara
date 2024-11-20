@@ -98,8 +98,8 @@ function listItems(res) {
 }
 
 handle('/note/list', (req, res) => listNotes(res));
-function listNotes(res, lastInsertRowId) {
-  json(res, { notes: queryNote.all(), lastInsertRowId });
+function listNotes(res, lastInsertRowid) {
+  json(res, { notes: queryNote.all(), lastInsertRowid });
 }
 
 async function getJsonBody(req) {
@@ -124,16 +124,17 @@ handle('/note/add', async (req, res) => {
     return error(req, res, 400, 'No title/content found');
   }
 
-  const { lastInsertRowId } = insertNote.run(data.title, data.content);
-  listNotes(res, lastInsertRowId);
+  const result = insertNote.run(data.title, data.content);
+  console.log('insertNote result:', result);
+  listNotes(res, result.lastInsertRowid);
 });
 
 handle('/asset/add', async (req, res) => {
   const data = await getJsonBody(req);
   if (!data.content) return error(req, res, 400, 'No content found');
 
-  const { lastInsertRowId } = insertAsset.run(data.content);
-  json(res, { lastInsertRowId });
+  const { lastInsertRowid } = insertAsset.run(data.content);
+  json(res, { lastInsertRowid });
 });
 
 handle('/item/check', async (req, res) => {
