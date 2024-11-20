@@ -120,7 +120,7 @@ handle('/item/add', async (req, res) => {
 
 handle('/note/add', async (req, res) => {
   const data = await getJsonBody(req);
-  if (!data.title || !data.content) {
+  if (!('title' in data) || !('content' in data)) {
     return error(req, res, 400, 'No title/content found');
   }
 
@@ -149,12 +149,15 @@ handle('/item/check', async (req, res) => {
   listItems(res);
 });
 
+function checkKeys(data, ...keys) {
+  for (const key of keys) {
+    if (!(key in data)) throw Error(`Missing ${key} in ${data}`);
+  }
+}
+
 handle('/note/update', async (req, res) => {
   const data = await getJsonBody(req);
-  if (!data.rowid || !data.title || !data.content) {
-    error(req, res, 500, `No rowid/title/content: ${data}`);
-    return;
-  }
+  checkKeys(data, 'rowid', 'title', 'content');
 
   const update = db.prepare("UPDATE notes SET title = ?, content = ? WHERE rowid = ?");
   console.log("sqlite update note:", update.run(data.title, data.content, data.rowid));
