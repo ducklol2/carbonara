@@ -52,6 +52,7 @@ function handle(path, handler) {
 const staticFiles = [
   ['index.html', '/'],
   ['note.html', '/note(/\\d+)?'],
+  ['jd.mjs'],
   ['client.mjs'],
   ['client_api.mjs'],
   ['client_util.mjs'],

@@ -22,6 +22,6 @@ export function el(type, ...children) {
 window.el = el;
 
 export function q(query) {
-  return document.querySelector(query);
+  return document.querySelector(query) || document.querySelector('#' + query);
 }
 window.q = q;

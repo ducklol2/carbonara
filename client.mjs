@@ -1,28 +1,31 @@
-import * as api from "/client_api.mjs";
-import { el, q } from "/client_util.mjs";
+import * as api from '/client_api.mjs';
+import { el, q } from '/client_util.mjs';
+import { renderText, splitTextBlocks } from './jd.mjs';
 
 let notes = await api.list();
-console.log("notes:", notes);
+console.log('notes:', notes);
 
 let note = notes.find((n) => n.rowid == rowid());
 if (!note) {
   if (rowid()) {
     // Note doesn't exist any more; remove from URL
-    history.pushState({}, "", "/note");
+    history.pushState({}, '', '/note');
   }
   note = {
     title: `New Note [${new Date().toLocaleString()}]`,
-    content: "",
+    content: '',
   };
 }
 
+window.note = note;
+
 function renderTitle() {
-  q("#title").textContent = note.title;
+  q('#title').textContent = note.title;
 }
 renderTitle();
 
-q("#title").onkeydown = (event) => {
-  if (event.key != "Enter") return;
+q('#title').onkeydown = (event) => {
+  if (event.key != 'Enter') return;
 
   event.target.blur();
   event.stopPropagation();
@@ -32,31 +35,37 @@ q("#title").onkeydown = (event) => {
 };
 
 function renderMenu() {
-  q("#noteslist").replaceChildren();
+  q('#noteslist').replaceChildren();
   for (const note of notes) {
-    const a = el("a", note.title);
+    const a = el('a', note.title);
     a.href = `/note/${note.rowid}`;
 
-    const b = el("button", "x");
+    const b = el('button', 'x');
     b.onclick = async () => {
       api.remove(note.rowid);
       notes = await api.list();
       renderMenu();
     };
 
-    let item = el("p", a, "\t", b);
+    let item = el('p', a, '\t', b);
     if (rowid() == note.rowid) {
-      item.style.backgroundColor = "lightgray";
+      item.style.backgroundColor = 'lightgray';
     }
 
-    q("#noteslist").append(item);
+    q('#noteslist').append(item);
   }
 }
 renderMenu();
 
 function renderContent() {
-  q("#content").replaceChildren(q("#editor"));
-  renderMd(q("#content"), q("#editor"), note.content);
+  q('content').replaceChildren(q('editor'));
+
+  const blocks = renderText(note.content);
+  console.log('rendered blocks:', blocks);
+  for (const block of blocks) {
+    block.onclick = editBlock;
+    q('content').insertBefore(block, q('editor'));
+  }
 }
 renderContent();
 
@@ -64,88 +73,105 @@ let timeoutId = null;
 function startSave() {
   if (timeoutId) clearTimeout(timeoutId);
   timeoutId = setTimeout(save, 1000);
-  q("#status").textContent = "Waiting to save...";
+  q('#status').textContent = 'Waiting to save...';
 }
 
-const editor = q("#editor");
+const editor = q('#editor');
+function resizeEditor() {
+  editor.style.height = 0;
+  editor.style.height = editor.scrollHeight + 30 + 'px';
+}
+
 editor.onkeydown = (event) => {
-  if (event.key == "Enter") saveEditor();
-  else if (event.key == "Backspace") {
-    if (editor.value.length == 0) {
-      const i = getEditorIndex();
-      if (i > 0) q('#content').children[i - 1].onclick();
-    }
+  switch (event.key) {
+    case 'Enter':
+      // debugger;
+      if (q('editor').value.endsWith('\n')) saveEditor();
+      break;
+    
+    case 'Backspace':
+      if (editor.value.length == 0) {
+        const i = getEditorIndex();
+        if (i > 0) {
+          const target = q('#content').children[i - 1];
+          target.onclick({target});
+        }
+      }
+      break;
   }
+
+  setTimeout(resizeEditor);
 };
 
 function getEditorIndex() {
-  return [...q('#content').children].indexOf(q('#editor'));  
+  return [...q('#content').children].indexOf(q('#editor'));
 }
 
 function saveEditor() {
-  const i = getEditorIndex();  
-  if (i < 0) {
-    note.content += editor.value + "\n";
-  } else {
-    const lines = note.content.split('\n');
+  const i = getEditorIndex();
+  const blocks = splitTextBlocks(note.content);
+  console.log('saveEditor(): i=', i, ', blocks=', blocks);
 
+  if (!blocks.length) {
+    // First block!
+    note.content = editor.value + '\n';
+  } else {
     if (editor.value.length) {
-      lines[i] = editor.value;
+      blocks[i] = editor.value;
     } else {
       // empty; delete line
-      lines.splice(i, 1);
+      blocks.splice(i, 1);
     }
-
-    note.content = lines.join('\n');
+    note.content = blocks.join('\n\n');
   }
 
   renderContent();
-  console.log("new note:", note);
-  editor.value = "";
+  console.log('new note:', note);
+  editor.value = '';
   event.preventDefault();
   event.stopPropagation();
   editor.focus();
   startSave();
-};
+}
 
 editor.onpaste = (event) => {
   const data = extractPaste(event);
-  console.log("paste data:", data);
+  console.log('paste data:', data);
   event.preventDefault();
 };
 
 function extractPaste(event) {
   // console.log('paste', event.clipboardData.items.length, 'items:', event.clipboardData.types, event.clipboardData);
-  const fileIndex = event.clipboardData.types.indexOf("Files");
+  const fileIndex = event.clipboardData.types.indexOf('Files');
   if (fileIndex >= 0) {
     // console.log('paste file:', event.clipboardData.items[fileIndex].getAsFile());
     return event.clipboardData.items[fileIndex].getAsFile();
   }
 
-  return event.clipboardData.getData("text");
+  return event.clipboardData.getData('text');
 }
 
-q("#content").onclick = () => editor.focus();
+q('#content').onclick = () => editor.focus();
 
-const main = q("#main");
-const menu = q("#menu");
-const menubutton = q("#menubutton");
+const main = q('#main');
+const menu = q('#menu');
+const menubutton = q('#menubutton');
 menubutton.onclick = () => {
-  menu.style.display = menu.style.display ? "" : "block";
-  main.style["grid-template-columns"] = main.style["grid-template-columns"]
-    ? ""
-    : "5fr 1fr";
+  menu.style.display = menu.style.display ? '' : 'block';
+  main.style['grid-template-columns'] = main.style['grid-template-columns']
+    ? ''
+    : '5fr 1fr';
 };
 if (window.innerWidth > 800) menubutton.onclick();
 
 async function save() {
-  note.title = q("#title").textContent.trim();
+  note.title = q('#title').textContent.trim();
   if (rowid()) {
     const data = await api.update(rowid(), note.title, note.content);
     notes = data.notes;
   } else {
     const data = await api.add(note.title, note.content);
-    history.pushState({}, "", `/note/${data.lastInsertRowid}`);
+    history.pushState({}, '', `/note/${data.lastInsertRowid}`);
     notes = data.notes;
   }
   renderMenu();
@@ -154,33 +180,35 @@ async function save() {
     clearTimeout(timeoutId);
     timeoutId = null;
   }
-  q("#status").textContent = `Saved [${new Date().toLocaleString()}]`;
+  q('#status').textContent = `Saved [${new Date().toLocaleString()}]`;
 }
 
-function renderMd(parent, before, text) {
-  const lines = text.split("\n");
-  for (let i = 0; i < lines.length; i++) {
-    if (!lines[i].trim().length) continue;
+// function renderMd(parent, before, text) {
+//   const lines = text.split('\n');
+//   for (let i = 0; i < lines.length; i++) {
+//     if (!lines[i].trim().length) continue;
 
-    const headerRe = /(#+) ?(.*)/;
-    let header = headerRe.exec(lines[i]);
-    let lineEl = header
-      ? el(`h${header[1].length}`, header[2])
-      : el("p", lines[i]);
-    lineEl.onclick = editLine.bind(null, i);
-    parent.insertBefore(lineEl, before);
-  }
-}
+//     const headerRe = /(#+) ?(.*)/;
+//     let header = headerRe.exec(lines[i]);
+//     let lineEl = header
+//       ? el(`h${header[1].length}`, header[2])
+//       : el('p', lines[i]);
+//     lineEl.onclick = editLine.bind(null, i);
+//     parent.insertBefore(lineEl, before);
+//   }
+// }
 
 function rowid() {
   const match = /note\/(\d+)$/.exec(window.location.pathname);
   return match ? parseInt(match[1]) : null;
 }
 
-function editLine(i) {
-  console.log("edit line:", i);
+function editBlock(event) {
+  const i = [...q('#content').children].indexOf(event.target);
+  console.log('edit block', i);
   saveEditor();
   q('#content').replaceChild(q('#editor'), q('#content').children[i]);
-  q('#editor').value = note.content.split('\n')[i];
+  q('#editor').value = splitTextBlocks(note.content)[i];
   q('#editor').focus();
+  resizeEditor();
 }
